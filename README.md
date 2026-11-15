@@ -5,7 +5,7 @@
 ![Batto Concept](https://img.shields.io/badge/Windows-11%20%7C%2010-0078D4?logo=windows)
 ![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
 ![Architecture](https://img.shields.io/badge/Architecture-Modular-22C55E)
-![Tests](https://img.shields.io/badge/Tests-52%20Passed-success)
+![Tests](https://img.shields.io/badge/Tests-60%20Passed-success)
 
 ---
 
@@ -23,7 +23,8 @@ Exemplo visual:
 ## ✨ Características
 
 - **Ícones Individuais por Dispositivo**: Cada dispositivo conectado possui seu próprio ícone na System Tray utilizando a API nativa `Shell_NotifyIcon`.
-- **Renderização Dinâmica**: Ícones gerados em tempo de execução via GDI+ com anti-aliasing e desenho nítido nas resoluções 16x16, 20x20, 24x24 e 32x32 (DPI-aware).
+- **Ícone Único na Bandeja**: um anel dividido em segmentos, um por dispositivo visível. Cada segmento se preenche conforme a bateria e usa a cor da faixa. Renderizado via GDI+ em 16, 20, 24 e 32 px (DPI-aware).
+- **Cartão ao Passar o Mouse**: ao apontar para o ícone do Batto, um cartão lista todos os dispositivos com anel, nome, status, percentual e horário da última leitura. Some sozinho quando o ponteiro sai.
 - **Duplo Mecanismo de Leitura**:
   1. **Bluetooth Low Energy (GATT)**: Serviço de Bateria (UUID `0x180F`) e Característica (UUID `0x2A19`) com suporte a push notifications (`ValueChanged`).
   2. **Windows Device Property (PnP)**: Chave `DEVPKEY_Device_BatteryLevel` (`{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2`) para fones de ouvido Bluetooth clássicos (Hands-Free Profile) e dispositivos gerenciados pelo Windows.
@@ -83,7 +84,7 @@ src/Batto/
 # Compilar a solução
 dotnet build
 
-# Executar suite completa de 52 testes unitários
+# Executar suite completa de 60 testes unitários
 dotnet test
 
 # Executar o aplicativo
@@ -118,14 +119,24 @@ Ou diretamente pelo menu **Configurações do Windows > Aplicativos > Aplicativo
 
 ---
 
-## 📌 Dica de Uso no Windows 11
+## 📌 Ícones Fora do Menu Oculto (Windows 11)
 
-Por padrão de segurança do Windows 11, novos ícones de aplicativos que usam a bandeja do sistema são colocados dentro da setinha de transbordamento (`^`).
+Por padrão, o Windows 11 coloca novos ícones de bandeja dentro do menu oculto (`^`).
+O Batto corrige isso automaticamente: com a opção **Manter ícones fora do menu oculto** (aba Configurações, ativada por padrão), ele marca os próprios ícones como promovidos em `HKCU\Control Panel\NotifyIconSettings`. Só são alteradas entradas cujo `ExecutablePath` é o do próprio `Batto.exe`.
 
-Para manter os ícones de bateria permanentemente visíveis ao lado do relógio:
-1. Clique na setinha `^` ao lado do relógio.
-2. Arraste os ícones do Batto diretamente para a barra de tarefas.
-3. Ou abra **Configurações do Windows > Personalização > Barra de Tarefas > Outros ícones da bandeja do sistema** e ative o **Batto**.
+Se o Windows ainda assim ocultar algum ícone:
+1. Clique na setinha `^` ao lado do relógio e arraste o ícone do Batto para a barra.
+2. Ou abra **Configurações > Personalização > Barra de Tarefas > Outros ícones da bandeja do sistema** e ative o **Batto**.
+
+---
+
+## ⚠️ Limitações de Compatibilidade
+
+- **Leitura depende do dispositivo**: nem todo fone ou periférico expõe o nível de bateria ao Windows. Esses dispositivos aparecem como `N/D`.
+- **Dois mecanismos de leitura**: a propriedade PnP `DEVPKEY_Device_BatteryLevel` (Bluetooth clássico / Hands-Free) e o serviço GATT de bateria `0x180F` (BLE). Um dispositivo que expõe apenas um deles pode não ser lido pelo outro.
+- **Atualização**: notificações push quando o dispositivo suporta GATT; caso contrário, consulta periódica (intervalo configurável, mínimo de 15 s).
+- **Limite da bandeja**: o Windows pode ocultar ícones quando a barra está cheia. Use ▲ / ▼ na lista de dispositivos para definir a prioridade e `MaxTrayIcons` nas configurações.
+- **Windows 10**: suportado com as mesmas APIs, mas o menu `^` não existe da mesma forma, então a promoção automática não se aplica.
 
 ---
 
