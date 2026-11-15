@@ -11,7 +11,6 @@ permissions:
   contents: write
 
 jobs:
-  # 1. Compile the solution. Test and lint only run when this job succeeds.
   build:
     runs-on: windows-latest
     steps:
@@ -25,7 +24,6 @@ jobs:
       - name: Build
         run: dotnet build Batto.slnx -c Release
 
-  # 2. Unit tests. Depends on build.
   test:
     needs: build
     runs-on: windows-latest
@@ -40,7 +38,6 @@ jobs:
       - name: Test
         run: dotnet test Batto.slnx -c Release
 
-  # 3. Lint: compiler analyzers with warnings treated as errors. Depends on build.
   lint:
     needs: build
     runs-on: windows-latest
@@ -55,7 +52,6 @@ jobs:
       - name: Lint (warnings as errors)
         run: dotnet build Batto.slnx -c Release -warnaserror -p:EnforceCodeStyleInBuild=true
 
-  # 4. Release artifacts. Runs only for version tags, after build, test and lint all pass.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, test, lint]
