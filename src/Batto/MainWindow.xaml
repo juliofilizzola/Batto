@@ -1,0 +1,529 @@
+<Window x:Class="Batto.MainWindow"
+        Icon="pack://application:,,,/Assets/batto.ico"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Batto.ViewModels"
+        xmlns:models="clr-namespace:Batto.Models"
+        mc:Ignorable="d"
+        Title="Batto - Bluetooth Battery Tray"
+        Height="640" Width="1100"
+        MinHeight="500" MinWidth="1040"
+        WindowStartupLocation="CenterScreen"
+        Background="#181818"
+        Foreground="#F3F3F3"
+        FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Modern ScrollViewer style -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Width="{TemplateBinding Width}">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border Background="#4A4A4A" CornerRadius="4" Margin="1,0"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Dark combo box: replaces the light system template -->
+        <Style x:Key="DarkCombo" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#E5E5E5"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="box" Background="#2A2A2A" BorderBrush="#404040" BorderThickness="1" CornerRadius="6">
+                                            <Path Data="M 0 0 L 4 4 L 8 0" Stroke="#9CA3AF" StrokeThickness="1.5"
+                                                  HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="box" Property="Background" Value="#333333"/>
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="box" Property="BorderBrush" Value="#0078D4"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter IsHitTestVisible="False" Margin="10,0,30,0" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding ItemTemplate}"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+                                <Border Background="#2A2A2A" BorderBrush="#404040" BorderThickness="1" CornerRadius="6" Padding="2"
+                                        MinWidth="{TemplateBinding ActualWidth}" MaxHeight="260">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="#E5E5E5"/>
+                        <Setter Property="Padding" Value="8,5"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="itemBorder" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="itemBorder" Property="Background" Value="#383838"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="itemBorder" Property="Background" Value="#1C2836"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Toggle Switch Style -->
+        <Style x:Key="ModernToggle" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal">
+                            <Border x:Name="border" Width="42" Height="22" CornerRadius="11" Background="#3A3A3A" Margin="0,0,8,0">
+                                <Ellipse x:Name="dot" Width="16" Height="16" Fill="#E0E0E0" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                    <Ellipse.RenderTransform>
+                                        <TranslateTransform x:Name="trans"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0078D4"/>
+                                <Setter TargetName="dot" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="dot" Property="Margin" Value="0,0,3,0"/>
+                                <Setter TargetName="dot" Property="Fill" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Navigation tab style (matches the dark cards) -->
+        <Style x:Key="NavTab" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#D1D5DB"/>
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="BorderBrush" Value="#404040"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="tabBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#383838"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="tabBorder" Property="Background" Value="#1C2836"/>
+                                <Setter TargetName="tabBorder" Property="BorderBrush" Value="#2D4663"/>
+                                <Setter Property="Foreground" Value="#60A5FA"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Modern Action Button -->
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1D4ED8"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Foreground" Value="#E5E5E5"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#404040"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#383838"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Bar -->
+        <Border Grid.Row="0" Background="#202020" BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="20,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- App Logo & Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Width="38" Height="38" CornerRadius="8" Background="#0078D4" Margin="0,0,14,0">
+                        <Grid Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <!-- Vector version of the tray ring: three segments, 85% / 35% / 12% -->
+                            <Ellipse Width="26" Height="26" Stroke="#3A3A3A" StrokeThickness="4" StrokeDashArray="6.58 13.84" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="-84"/></Ellipse.RenderTransform></Ellipse>
+                            <Ellipse Width="26" Height="26" Stroke="#3A3A3A" StrokeThickness="4" StrokeDashArray="6.58 13.84" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="44"/></Ellipse.RenderTransform></Ellipse>
+                            <Ellipse Width="26" Height="26" Stroke="#3A3A3A" StrokeThickness="4" StrokeDashArray="6.58 13.84" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="172"/></Ellipse.RenderTransform></Ellipse>
+                            <Ellipse Width="26" Height="26" Stroke="#22C55E" StrokeThickness="4" StrokeDashArray="5.59 14.83" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="-84"/></Ellipse.RenderTransform></Ellipse>
+                            <Ellipse Width="26" Height="26" Stroke="#F59E0B" StrokeThickness="4" StrokeDashArray="2.30 18.12" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="44"/></Ellipse.RenderTransform></Ellipse>
+                            <Ellipse Width="26" Height="26" Stroke="#EF4444" StrokeThickness="4" StrokeDashArray="0.79 19.63" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform Angle="172"/></Ellipse.RenderTransform></Ellipse>
+                        </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Batto" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF"/>
+                            <Border Background="#2E384D" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="System Tray" FontSize="11" FontWeight="SemiBold" Foreground="#60A5FA"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="Monitor de bateria Bluetooth na barra de tarefas" FontSize="12" Foreground="#9CA3AF" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Middle Badges -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Background="#252525" BorderBrush="#353535" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="4,0">
+                        <TextBlock FontSize="12" Foreground="#D1D5DB">
+                            <Run Text="Dispositivos: "/>
+                            <Run Text="{Binding TotalDevicesCount, Mode=OneWay}" FontWeight="Bold" Foreground="#FFFFFF"/>
+                        </TextBlock>
+                    </Border>
+                    <Border Background="#252525" BorderBrush="#353535" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="4,0">
+                        <TextBlock FontSize="12" Foreground="#D1D5DB">
+                            <Run Text="Conectados: "/>
+                            <Run Text="{Binding ConnectedDevicesCount, Mode=OneWay}" FontWeight="Bold" Foreground="#22C55E"/>
+                        </TextBlock>
+                    </Border>
+                    <Border Background="#252525" BorderBrush="#353535" BorderThickness="1" CornerRadius="12" Padding="10,4" Margin="4,0">
+                        <TextBlock FontSize="12" Foreground="#D1D5DB">
+                            <Run Text="Na Barra: "/>
+                            <Run Text="{Binding TrayVisibleCount, Mode=OneWay}" FontWeight="Bold" Foreground="#38BDF8"/>
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+
+                <!-- Action Buttons & Tab Switcher -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="🔄 Atualizar" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"/>
+                    <RadioButton x:Name="TabDevicesRadio" Content="📱 Dispositivos" IsChecked="True" GroupName="NavTabs" Style="{StaticResource NavTab}" Margin="0,0,4,0"/>
+                    <RadioButton x:Name="TabSettingsRadio" Content="⚙ Configurações" GroupName="NavTabs" Style="{StaticResource NavTab}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="20,16">
+
+            <!-- TAB 1: DEVICES LIST -->
+            <Grid x:Name="DevicesPanel" Visibility="{Binding ElementName=TabDevicesRadio, Path=IsChecked, Converter={StaticResource BoolToVis}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Dispositivos Bluetooth Pareados" FontSize="14" FontWeight="SemiBold" Foreground="#9CA3AF" Margin="4,0,0,10"/>
+
+                <!-- Device Cards ScrollView -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Devices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:BluetoothDeviceModel}">
+                                <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16,14" Margin="0,0,0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Device Type Glyph Icon -->
+                                        <Border Grid.Column="0" Width="48" Height="48" CornerRadius="8" Background="#2C2C2C" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="{Binding TypeGlyph}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Device Info -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis"/>
+                                                <!-- Connection Badge -->
+                                                <Border Background="#2C2C2C" CornerRadius="10" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding StatusDescription}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusColorHex}"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Subtitle: Source & Last Updated -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <TextBlock Text="Fonte: " FontSize="12" Foreground="#888888"/>
+                                                <TextBlock Text="{Binding BatterySource, TargetNullValue='Verificando...'}" FontSize="12" Foreground="#AAAAAA" Margin="0,0,12,0"/>
+
+                                                <TextBlock Text="Última atualização: " FontSize="12" Foreground="#888888"/>
+                                                <TextBlock Text="{Binding LastUpdatedText}" FontSize="12" Foreground="#AAAAAA"/>
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- Battery Level Indicator -->
+                                        <Border Grid.Column="2" Background="#1D222A" BorderBrush="#353E4D" BorderThickness="1" CornerRadius="8" Padding="14,8" VerticalAlignment="Center" Margin="0,0,20,0">
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding BatteryText}" FontSize="16" FontWeight="Bold" Foreground="{Binding BatteryColorHex}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Show in Tray Toggle -->
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                                                                        <!-- Icon type picker -->
+                                            <ComboBox ItemsSource="{x:Static models:DeviceTypeOption.All}" SelectedValuePath="Type" SelectedValue="{Binding Type, Mode=OneWay}"
+                                            SelectionChanged="OnDeviceTypeChanged" Width="170" Margin="0,0,0,8"
+                                            Style="{StaticResource DarkCombo}" ToolTip="Escolha o ícone deste dispositivo">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Glyph}" Width="22" FontSize="13"/>
+                                                            <TextBlock Text="{Binding Label}" FontSize="12"/>
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <CheckBox IsChecked="{Binding IsTrayVisible}" Style="{StaticResource ModernToggle}" Margin="0,0,0,0" Content="Na Barra" Checked="OnTrayVisibilityToggled" Unchecked="OnTrayVisibilityToggled"/>
+                                            <!-- Display priority: higher values are shown first in the tray -->
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                <TextBlock Text="Prioridade" FontSize="11" Foreground="#888888" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <Button Content="▲" Width="26" Height="24" Click="OnPriorityUpClicked" ToolTip="Mostrar antes na barra" Background="#2C2C2C" Foreground="#E5E7EB" BorderThickness="0" Cursor="Hand"/>
+                                                <Button Content="▼" Width="26" Height="24" Margin="4,0,0,0" Click="OnPriorityDownClicked" ToolTip="Mostrar depois na barra" Background="#2C2C2C" Foreground="#E5E7EB" BorderThickness="0" Cursor="Hand"/>
+                                                <TextBlock Text="{Binding Priority}" FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+            <!-- TAB 2: SETTINGS -->
+            <Grid x:Name="SettingsPanel" Visibility="{Binding ElementName=TabSettingsRadio, Path=IsChecked, Converter={StaticResource BoolToVis}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="4,0">
+                        <TextBlock Text="Preferências e Inicialização" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,12"/>
+
+                        <!-- Interval Card -->
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Intervalo de Atualização da Bateria" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Frequência em segundos para checagem em segundo plano" FontSize="12" Foreground="#888888" Margin="0,2,0,0"/>
+                                    <Slider Minimum="15" Maximum="300" TickFrequency="15" IsSnapToTickEnabled="True" Value="{Binding RefreshIntervalSeconds}" Width="260" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding RefreshIntervalSeconds, StringFormat='{}{0} segundos'}" FontSize="14" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Startup Cards -->
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Iniciar com o Windows" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Inicia o Batto automaticamente ao ligar o computador" FontSize="12" Foreground="#888888" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding StartWithWindows}" Style="{StaticResource ModernToggle}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Iniciar Minimizado" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Mantém a janela oculta ao iniciar, exibindo apenas os ícones na barra" FontSize="12" Foreground="#888888" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding StartMinimized}" Style="{StaticResource ModernToggle}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Manter ícones fora do menu oculto (^)" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Torna os ícones do Batto visíveis ao lado do relógio, sem precisar arrastá-los do menu ^" FontSize="12" Foreground="#888888" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding PromoteTrayIcons}" Style="{StaticResource ModernToggle}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Notification Cards -->
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="Notificações do Windows" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF" Margin="0,0,0,10"/>
+
+                                <Grid Margin="0,4">
+                                    <TextBlock Text="Alerta de bateria baixa (abaixo de 20%)" FontSize="13" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    <CheckBox IsChecked="{Binding NotifyLowBattery}" Style="{StaticResource ModernToggle}" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <Grid Margin="0,8,0,4">
+                                    <TextBlock Text="Alerta de bateria crítica (abaixo de 10%)" FontSize="13" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    <CheckBox IsChecked="{Binding NotifyCriticalBattery}" Style="{StaticResource ModernToggle}" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <Grid Margin="0,8,0,4">
+                                    <TextBlock Text="Notificar quando dispositivo conectar" FontSize="13" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    <CheckBox IsChecked="{Binding NotifyConnected}" Style="{StaticResource ModernToggle}" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <Grid Margin="0,8,0,4">
+                                    <TextBlock Text="Notificar quando dispositivo desconectar" FontSize="13" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                    <CheckBox IsChecked="{Binding NotifyDisconnected}" Style="{StaticResource ModernToggle}" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Taskbar Instructions Card -->
+                        <Border Background="#1C2836" BorderBrush="#2D4663" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="📌 Como manter os ícones permanentemente visíveis no Windows 11" FontSize="14" FontWeight="SemiBold" Foreground="#60A5FA"/>
+                                    <TextBlock Text="No Windows 11, novos ícones de bandeja começam no menu oculto (^). Com a opção Manter ícones fora do menu oculto ativada, o Batto se promove automaticamente. Se o Windows ainda assim os ocultar, ative-os em Configurações da barra de tarefas > Outros ícones da bandeja do sistema." FontSize="12" Foreground="#93C5FD" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Configurações da Barra" Command="{Binding OpenTaskbarSettingsCommand}" Style="{StaticResource SecondaryButton}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- App Actions -->
+                        <Border Background="#232323" BorderBrush="#333333" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Gerenciar Aplicativo" FontSize="14" FontWeight="SemiBold" Foreground="#FFFFFF"/>
+                                    <TextBlock Text="Fechar a janela minimiza o Batto para a bandeja do sistema." FontSize="12" Foreground="#888888" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Encerrar o Batto" Command="{Binding ExitAppCommand}" Background="#7F1D1D" Foreground="#FCA5A5" FontWeight="SemiBold" Padding="14,6" BorderThickness="0" Cursor="Hand" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <!-- Footer / Status Bar -->
+        <Border Grid.Row="2" Background="#1D1D1D" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" Padding="20,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding StatusMessage}" FontSize="12" Foreground="#9CA3AF" VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1" Content="Minimizar para a Bandeja" Click="OnMinimizeToTrayClicked" Style="{StaticResource SecondaryButton}"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
