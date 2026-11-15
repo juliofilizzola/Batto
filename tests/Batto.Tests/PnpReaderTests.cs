@@ -27,4 +27,12 @@ public class PnpReaderTests
     {
         Assert.Equal(expected, Batto.Bluetooth.PnpBatteryReader.ExtractClassicAddress(id));
     }
+
+    [Theory]
+    [InlineData("BluetoothLE#BluetoothLEe8:48:b8:c8:20:00-dc:56:13:53:f5:b8", "DC561353F5B8")]
+    [InlineData("Bluetooth#Bluetoothe8:48:b8:c8:20:00-c4:33:96:0b:ef:d0", null)]
+    public void ExtractLeAddress_ReturnsRemoteAddressForBleIdsOnly(string id, string? expected)
+    {
+        Assert.Equal(expected, Batto.Bluetooth.PnpBatteryReader.ExtractLeAddress(id));
+    }
 }
