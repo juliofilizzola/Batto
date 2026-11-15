@@ -9,6 +9,18 @@
 
 ---
 
+## 🖼 Capturas de Tela
+
+**Cartão ao passar o mouse sobre o ícone na bandeja**
+
+![Cartão de dispositivos ao passar o mouse](docs/screenshots/tray-flyout.png)
+
+**Janela principal com dispositivos pareados**
+
+![Janela principal do Batto](docs/screenshots/main-window.png)
+
+---
+
 ## 🎯 Objetivo Principal
 
 O **Batto** exibe o nível de bateria dos seus fones, mouses, teclados e controles Bluetooth **diretamente na área de notificação da barra de tarefas (System Tray)**, ao lado do relógio do Windows, sem a necessidade de manter janelas abertas ou clicar em menus.
@@ -22,7 +34,6 @@ Exemplo visual:
 
 ## ✨ Características
 
-- **Ícones Individuais por Dispositivo**: Cada dispositivo conectado possui seu próprio ícone na System Tray utilizando a API nativa `Shell_NotifyIcon`.
 - **Ícone Único na Bandeja**: um anel dividido em segmentos, um por dispositivo visível. Cada segmento se preenche conforme a bateria e usa a cor da faixa. Renderizado via GDI+ em 16, 20, 24 e 32 px (DPI-aware).
 - **Cartão ao Passar o Mouse**: ao apontar para o ícone do Batto, um cartão lista todos os dispositivos com anel, nome, status, percentual e horário da última leitura. Some sozinho quando o ponteiro sai.
 - **Duplo Mecanismo de Leitura**:
