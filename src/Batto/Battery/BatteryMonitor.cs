@@ -179,11 +179,12 @@ public class BatteryMonitor : IDisposable
                 return;
             }
 
-            // 2. Classic devices: battery is often published on a service node with the same address
-            var classicAddress = PnpBatteryReader.ExtractClassicAddress(device.Id);
-            if (classicAddress != null)
+            // 2. Classic and BLE devices: Windows keeps the battery on a node with the same address.
+            //    This is preferred over GATT because some keyboards report a stale GATT value.
+            var address = PnpBatteryReader.ExtractClassicAddress(device.Id) ?? PnpBatteryReader.ExtractLeAddress(device.Id);
+            if (address != null)
             {
-                var serviceBattery = await _pnpReader.ReadBatteryByAddressAsync(classicAddress);
+                var serviceBattery = await _pnpReader.ReadBatteryByAddressAsync(address);
                 if (serviceBattery.HasValue)
                 {
                     device.BatteryLevel = serviceBattery.Value;
