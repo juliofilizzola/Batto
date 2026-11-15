@@ -1,0 +1,12 @@
+# Build output
+bin/
+obj/
+publish/
+installer_output/
+
+# IDE
+.idea/
+.vs/
+
+# Test runners
+TestResults/
