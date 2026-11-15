@@ -89,7 +89,8 @@ public class PnpBatteryReader
     }
 
     private static readonly Regex ClassicDeviceIdAddress = new(@"Bluetooth#Bluetooth[0-9a-fA-F:]{17}-([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})$", RegexOptions.Compiled);
-    private static readonly Regex ServiceNodeAddress = new(@"(?:&0&|DEV_)([0-9A-Fa-f]{12})(?:_|$)", RegexOptions.Compiled);
+    private static readonly Regex ServiceNodeAddress = new(@"(?:&0&|dev_)([0-9A-Fa-f]{12})(?=[_\\]|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex LeDeviceIdAddress = new(@"BluetoothLE#BluetoothLE[0-9a-fA-F:]{17}-([0-9a-fA-F]{2}(?::[0-9a-fA-F]{2}){5})$", RegexOptions.Compiled);
 
     /// <summary>
     /// Returns the 12-digit upper-case address (e.g. C433960BEFD0) for a classic Bluetooth device id,
@@ -102,8 +103,17 @@ public class PnpBatteryReader
     }
 
     /// <summary>
+    /// Returns the 12-digit upper-case address for a BLE device id, or null for other ids.
+    /// </summary>
+    public static string? ExtractLeAddress(string deviceId)
+    {
+        var match = LeDeviceIdAddress.Match(deviceId);
+        return match.Success ? match.Groups[1].Value.Replace(":", "").ToUpperInvariant() : null;
+    }
+
+    /// <summary>
     /// Classic headsets often expose battery on a service node (for example the Hands-Free
-    /// service) instead of on the device node. Scans every node that belongs to the same address.
+    /// service), and BLE keyboards expose it on the BTHLE node. Scans nodes that belong to the same address.
     /// </summary>
     public async Task<int?> ReadBatteryByAddressAsync(string address)
     {
@@ -112,7 +122,8 @@ public class PnpBatteryReader
             var nodes = await DeviceInformation.FindAllAsync(string.Empty, RequiredProperties, DeviceInformationKind.Device);
             foreach (var node in nodes)
             {
-                if (!node.Id.StartsWith(@"BTHENUM\", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!node.Id.StartsWith(@"BTHENUM\", StringComparison.OrdinalIgnoreCase) &&
+                    !node.Id.StartsWith(@"BTHLE\", StringComparison.OrdinalIgnoreCase)) continue;
 
                 var match = ServiceNodeAddress.Match(node.Id);
                 if (!match.Success || !string.Equals(match.Groups[1].Value, address, StringComparison.OrdinalIgnoreCase)) continue;
