@@ -1,4 +1,4 @@
-name: Build and release
+name: CI and release
 
 on:
   push:
@@ -11,6 +11,7 @@ permissions:
   contents: write
 
 jobs:
+  # 1. Compile the solution. Test and lint only run when this job succeeds.
   build:
     runs-on: windows-latest
     steps:
@@ -24,22 +25,55 @@ jobs:
       - name: Build
         run: dotnet build Batto.slnx -c Release
 
+  # 2. Unit tests. Depends on build.
+  test:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
       - name: Test
-        run: dotnet test Batto.slnx -c Release --no-build
+        run: dotnet test Batto.slnx -c Release
+
+  # 3. Lint: compiler analyzers with warnings treated as errors. Depends on build.
+  lint:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Lint (warnings as errors)
+        run: dotnet build Batto.slnx -c Release -warnaserror -p:EnforceCodeStyleInBuild=true
+
+  # 4. Release artifacts. Runs only for version tags, after build, test and lint all pass.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, test, lint]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
 
       - name: Publish self-contained executable
         run: >
           dotnet publish src/Batto/Batto.csproj -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
-      - name: Upload executable
-        uses: actions/upload-artifact@v4
-        with:
-          name: Batto-exe
-          path: publish/Batto.exe
-
       - name: Build installer
-        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y
@@ -50,7 +84,6 @@ jobs:
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" distribution\Batto.build.iss
 
       - name: Create release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: installer_output/Batto_Setup_*.exe
