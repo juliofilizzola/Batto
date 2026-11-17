@@ -25,11 +25,6 @@
 
 O **Batto** exibe o nível de bateria dos seus fones, mouses, teclados e controles Bluetooth **diretamente na área de notificação da barra de tarefas (System Tray)**, ao lado do relógio do Windows, sem a necessidade de manter janelas abertas ou clicar em menus.
 
-Exemplo visual:
-```
-[ 🎧 85% ]  [ 🖱 62% ]  [ ⌨ 94% ]  ^ 🔊 📶 21:55
-```
-
 ---
 
 ## ✨ Características
