@@ -75,7 +75,8 @@ public partial class App : Application
             _gattReader,
             _pnpReader,
             _notificationManager,
-            _settingsManager);
+            _settingsManager,
+            new Batto.Logitech.LogitechDeviceScanner());
 
         // 3. Initialize Tray Manager
         _trayManager = new TrayManager(

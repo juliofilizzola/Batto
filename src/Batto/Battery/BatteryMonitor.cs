@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Windows;
 using Batto.Bluetooth;
+using Batto.Logitech;
 using Batto.Models;
 using Batto.Notifications;
 using Batto.Storage;
@@ -15,6 +16,7 @@ public class BatteryMonitor : IDisposable
     private readonly PnpBatteryReader _pnpReader;
     private readonly NotificationManager _notificationManager;
     private readonly SettingsManager _settingsManager;
+    private readonly LogitechDeviceScanner? _logitechScanner;
 
     private readonly System.Timers.Timer _refreshTimer;
     private readonly ConcurrentDictionary<string, BluetoothDeviceModel> _deviceMap = new();
@@ -31,13 +33,15 @@ public class BatteryMonitor : IDisposable
         GattBatteryReader gattReader,
         PnpBatteryReader pnpReader,
         NotificationManager notificationManager,
-        SettingsManager settingsManager)
+        SettingsManager settingsManager,
+        LogitechDeviceScanner? logitechScanner = null)
     {
         _bluetoothManager = bluetoothManager;
         _gattReader = gattReader;
         _pnpReader = pnpReader;
         _notificationManager = notificationManager;
         _settingsManager = settingsManager;
+        _logitechScanner = logitechScanner;
 
         // Wire GATT push notifications (real-time BLE updates)
         _gattReader.BatteryLevelReceived += OnGattBatteryPush;
@@ -144,12 +148,45 @@ public class BatteryMonitor : IDisposable
 
         try
         {
+            await SyncLogitechDevicesAsync();
+
             var tasks = _deviceMap.Values.Select(device => QueryDeviceBatteryAsync(device)).ToList();
             await Task.WhenAll(tasks);
         }
         finally
         {
             _isRefreshing = false;
+        }
+    }
+
+    /// <summary>Adds Logitech devices paired to a receiver, which Windows does not list as Bluetooth devices.</summary>
+    private async Task SyncLogitechDevicesAsync()
+    {
+        if (_logitechScanner == null) return;
+
+        IReadOnlyList<LogitechSlot> slots;
+        try
+        {
+            slots = await _logitechScanner.DiscoverAsync();
+        }
+        catch (Exception ex)
+        {
+            CrashLogger.Log("LogitechDeviceScanner.DiscoverAsync", ex);
+            return;
+        }
+
+        foreach (var slot in slots)
+        {
+            if (_deviceMap.ContainsKey(slot.Id)) continue;
+
+            var model = new BluetoothDeviceModel
+            {
+                Id = slot.Id,
+                Name = slot.Name,
+                Type = BluetoothManager.ClassifyDeviceType(slot.Name),
+                IsConnected = true
+            };
+            OnBluetoothDeviceDiscovered(model);
         }
     }
 
@@ -166,6 +203,12 @@ public class BatteryMonitor : IDisposable
     {
         try
         {
+            if (_logitechScanner != null && LogitechDeviceScanner.IsLogitechId(device.Id))
+            {
+                await QueryLogitechBatteryAsync(device);
+                return;
+            }
+
             // 1. Try Windows PnP property first (fast, works for Classic Bluetooth & connected audio headsets)
             var pnpBattery = await _pnpReader.ReadBatteryAsync(device.Id);
             if (pnpBattery.HasValue)
@@ -219,6 +262,29 @@ public class BatteryMonitor : IDisposable
         catch (Exception ex)
         {
             CrashLogger.Log($"QueryDeviceBatteryAsync({device.Name})", ex);
+        }
+    }
+
+    private async Task QueryLogitechBatteryAsync(BluetoothDeviceModel device)
+    {
+        int? level = await _logitechScanner!.ReadBatteryAsync(device.Id);
+        bool connected = level.HasValue;
+
+        if (device.IsConnected != connected)
+        {
+            device.IsConnected = connected;
+            _notificationManager.NotifyConnectionChanged(device, connected);
+            DeviceConnectionChanged?.Invoke(device);
+        }
+
+        if (level.HasValue)
+        {
+            device.BatteryLevel = level.Value;
+            device.HasBatteryInfo = true;
+            device.BatterySource = "Logitech HID++";
+            device.LastUpdated = DateTime.Now;
+            _notificationManager.CheckBatteryAlerts(device);
+            DeviceBatteryUpdated?.Invoke(device);
         }
     }
 
