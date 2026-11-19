@@ -1,6 +1,6 @@
 ; Script do Inno Setup para Batto - Bluetooth Battery Tray
 #define MyAppName "Batto"
-#define MyAppVersion "0.0.2"
+#define MyAppVersion "0.0.3"
 #define MyAppPublisher "Batto Open Source"
 #define MyAppExeName "Batto.exe"
 
