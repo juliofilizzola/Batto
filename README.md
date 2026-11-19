@@ -30,7 +30,7 @@ O **Batto** exibe o nível de bateria dos seus fones, mouses, teclados e control
 ## ✨ Características
 
 - **Ícone Único na Bandeja**: um anel dividido em segmentos, um por dispositivo visível. Cada segmento se preenche conforme a bateria e usa a cor da faixa. Renderizado via GDI+ em 16, 20, 24 e 32 px (DPI-aware).
-- **Cartão ao Passar o Mouse**: ao apontar para o ícone do Batto, um cartão lista todos os dispositivos com anel, nome, status, percentual e horário da última leitura. Some sozinho quando o ponteiro sai.
+- **Cartão ao Passar o Mouse**: ao apontar para o ícone do Batto, um cartão lista os dispositivos conectados e visíveis na barra, com anel, nome, status, percentual e horário da última leitura. Dispositivos desconectados não aparecem no cartão. Some sozinho quando o ponteiro sai.
 - **Duplo Mecanismo de Leitura**:
   1. **Bluetooth Low Energy (GATT)**: Serviço de Bateria (UUID `0x180F`) e Característica (UUID `0x2A19`) com suporte a push notifications (`ValueChanged`).
   2. **Windows Device Property (PnP)**: Chave `DEVPKEY_Device_BatteryLevel` (`{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2`) para fones de ouvido Bluetooth clássicos (Hands-Free Profile) e dispositivos gerenciados pelo Windows.
