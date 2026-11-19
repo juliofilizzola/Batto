@@ -197,6 +197,16 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand OpenTaskbarSettingsCommand { get; }
     public ICommand OpenBluetoothSettingsCommand { get; }
     public ICommand ExitAppCommand { get; }
+    public ICommand OpenRepositoryCommand { get; }
+
+    public string AppVersionText
+    {
+        get
+        {
+            var version = typeof(MainViewModel).Assembly.GetName().Version;
+            return version is null ? "Versão desconhecida" : $"Versão {version.ToString(3)}";
+        }
+    }
 
     public MainViewModel(
         BatteryMonitor batteryMonitor,
@@ -210,6 +220,7 @@ public class MainViewModel : INotifyPropertyChanged
         RefreshCommand = new RelayCommand(async () => await RefreshAllAsync());
         OpenTaskbarSettingsCommand = new RelayCommand(OpenTaskbarSettings);
         OpenBluetoothSettingsCommand = new RelayCommand(OpenBluetoothSettings);
+        OpenRepositoryCommand = new RelayCommand(OpenRepository);
         ExitAppCommand = new RelayCommand(_exitAction);
 
         _batteryMonitor.DevicesCollectionChanged += () =>
@@ -266,6 +277,17 @@ public class MainViewModel : INotifyPropertyChanged
         try
         {
             Process.Start(new ProcessStartInfo("ms-settings:taskbar") { UseShellExecute = true });
+        }
+        catch
+        {
+        }
+    }
+
+    private void OpenRepository()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://github.com/juliofilizzola/Batto") { UseShellExecute = true });
         }
         catch
         {
