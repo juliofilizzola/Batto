@@ -369,7 +369,7 @@
                                                     </DataTemplate>
                                                 </ComboBox.ItemTemplate>
                                             </ComboBox>
-                                            <CheckBox IsChecked="{Binding IsTrayVisible}" Style="{StaticResource ModernToggle}" Margin="0,0,0,0" Content="Na Barra" Checked="OnTrayVisibilityToggled" Unchecked="OnTrayVisibilityToggled"/>
+                                            <CheckBox IsChecked="{Binding IsTrayVisible}" IsEnabled="{Binding IsConnected}" Style="{StaticResource ModernToggle}" Margin="0,0,0,0" Content="Na Barra" ToolTip="Disponível só com o dispositivo conectado" Checked="OnTrayVisibilityToggled" Unchecked="OnTrayVisibilityToggled"/>
                                             <!-- Display priority: higher values are shown first in the tray -->
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                                                 <TextBlock Text="Prioridade" FontSize="11" Foreground="#888888" VerticalAlignment="Center" Margin="0,0,8,0"/>

@@ -268,7 +268,9 @@ public class BatteryMonitor : IDisposable
     private async Task QueryLogitechBatteryAsync(BluetoothDeviceModel device)
     {
         int? level = await _logitechScanner!.ReadBatteryAsync(device.Id);
-        bool connected = level.HasValue;
+
+        // A silent poll alone is not a disconnect: keep the device connected for a grace period after its last reply
+        bool connected = LogitechPresence.IsConsideredConnected(level.HasValue, device.LastUpdated, DateTime.Now);
 
         if (device.IsConnected != connected)
         {
