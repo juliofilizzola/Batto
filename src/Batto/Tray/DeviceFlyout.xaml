@@ -17,21 +17,12 @@
     <Border Background="#1F1F1F" BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="10" Padding="8">
         <StackPanel>
             <TextBlock x:Name="EmptyText"
-                       Text="Nenhum dispositivo encontrado"
+                       Text="Nenhum dispositivo conectado"
                        FontSize="12" Foreground="#9CA3AF" Margin="8,6" Visibility="Collapsed"/>
             <ItemsControl x:Name="DeviceList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:BluetoothDeviceModel}">
                         <Grid Margin="4,4">
-                            <Grid.Style>
-                                <Style TargetType="Grid">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsTrayVisible, Mode=OneWay}" Value="False">
-                                            <Setter Property="Opacity" Value="0.55"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Grid.Style>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="30"/>
                                 <ColumnDefinition Width="*"/>

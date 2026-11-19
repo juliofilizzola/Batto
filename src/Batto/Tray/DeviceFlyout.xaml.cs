@@ -22,9 +22,9 @@ public partial class DeviceFlyout : Window
     {
         InitializeComponent();
 
-        // Private view: only devices that are shown in the tray. The main window keeps the full list.
+        // Private view: only connected devices that are shown in the tray. The main window keeps the full list.
         _view = new CollectionViewSource { Source = devices }.View;
-        _view.Filter = item => item is BluetoothDeviceModel { IsTrayVisible: true };
+        _view.Filter = item => item is BluetoothDeviceModel { IsTrayVisible: true, IsConnected: true };
         DeviceList.ItemsSource = _view;
         devices.CollectionChanged += (_, _) => UpdateContent();
         UpdateContent();
