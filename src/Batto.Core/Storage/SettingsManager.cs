@@ -1,27 +1,25 @@
 using System.IO;
 using System.Text.Json;
 using Batto.Models;
-using Microsoft.Win32;
 
 namespace Batto.Storage;
 
 public class SettingsManager
 {
-    private const string RunRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string AppRegistryName = "BattoBluetoothBatteryTray";
-
     private readonly string _settingsFolder;
     private readonly string _settingsPath;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly IAutostart? _autostart;
 
     public AppSettings Settings { get; private set; }
 
-    public SettingsManager(string? customFolder = null)
+    public SettingsManager(string? customFolder = null, IAutostart? autostart = null)
     {
         _settingsFolder = customFolder ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Batto");
         _settingsPath = Path.Combine(_settingsFolder, "settings.json");
+        _autostart = autostart;
 
         _jsonOptions = new JsonSerializerOptions
         {
@@ -68,7 +66,6 @@ public class SettingsManager
             string json = JsonSerializer.Serialize(Settings, _jsonOptions);
             File.WriteAllText(_settingsPath, json);
 
-            // Sync Windows Registry startup
             ApplyStartupSettings();
         }
         catch
@@ -81,33 +78,29 @@ public class SettingsManager
     {
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunRegistryKey, true);
-            if (key == null) return;
-
             string exePath = Environment.ProcessPath ?? string.Empty;
-            if (string.IsNullOrEmpty(exePath)) return;
+            if (string.IsNullOrEmpty(exePath) || _autostart == null) return;
 
             if (Settings.StartWithWindows)
             {
-                key.SetValue(AppRegistryName, $"\"{exePath}\" --minimized");
+                _autostart.Enable(exePath);
             }
             else
             {
-                key.DeleteValue(AppRegistryName, false);
+                _autostart.Disable();
             }
         }
         catch
         {
-            // Silently handle registry permissions
+            // Silently handle platform permission errors
         }
     }
 
-    public bool IsStartupEnabledInRegistry()
+    public bool IsStartupEnabled()
     {
         try
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunRegistryKey, false);
-            return key?.GetValue(AppRegistryName) != null;
+            return _autostart?.IsEnabled() ?? false;
         }
         catch
         {
@@ -124,8 +117,7 @@ public class SettingsManager
                 File.Delete(_settingsPath);
             }
 
-            using var key = Registry.CurrentUser.OpenSubKey(RunRegistryKey, true);
-            key?.DeleteValue(AppRegistryName, false);
+            _autostart?.Disable();
         }
         catch
         {

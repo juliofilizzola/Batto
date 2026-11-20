@@ -3,6 +3,7 @@ using System.Windows;
 using Batto.Battery;
 using Batto.Bluetooth;
 using Batto.Notifications;
+using Batto.Platform;
 using Batto.Storage;
 using Batto.Tray;
 using Batto.ViewModels;
@@ -19,6 +20,7 @@ public partial class App : Application
     private BluetoothManager? _bluetoothManager;
     private GattBatteryReader? _gattReader;
     private PnpBatteryReader? _pnpReader;
+    private WindowsBatteryReader? _batteryReader;
     private BatteryMonitor? _batteryMonitor;
     private TrayManager? _trayManager;
     private MainWindow? _mainWindow;
@@ -60,7 +62,7 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // 2. Initialize Core Services
-        _settingsManager = new SettingsManager();
+        _settingsManager = new SettingsManager(autostart: new WindowsAutostart());
 
         _notificationManager = new NotificationManager(
             _settingsManager.Settings,
@@ -69,14 +71,15 @@ public partial class App : Application
         _bluetoothManager = new BluetoothManager();
         _gattReader = new GattBatteryReader();
         _pnpReader = new PnpBatteryReader();
+        _batteryReader = new WindowsBatteryReader(_pnpReader, _gattReader);
 
         _batteryMonitor = new BatteryMonitor(
             _bluetoothManager,
-            _gattReader,
-            _pnpReader,
+            _batteryReader,
             _notificationManager,
             _settingsManager,
-            new Batto.Logitech.LogitechDeviceScanner());
+            new Batto.Logitech.LogitechDeviceScanner(),
+            new WpfUiDispatcher());
 
         // 3. Initialize Tray Manager
         _trayManager = new TrayManager(

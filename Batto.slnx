@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Batto.Core/Batto.Core.csproj" />
     <Project Path="src/Batto/Batto.csproj" />
   </Folder>
   <Folder Name="/tests/">

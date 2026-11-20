@@ -25,7 +25,7 @@ public class DeviceClassificationTests
     [InlineData("Dispositivo Desconhecido", DeviceType.Generic)]
     public void ClassifyDeviceType_ClassifiesCorrectly(string name, DeviceType expectedType)
     {
-        var type = BluetoothManager.ClassifyDeviceType(name);
+        var type = DeviceClassifier.ClassifyDeviceType(name);
         Assert.Equal(expectedType, type);
     }
 }

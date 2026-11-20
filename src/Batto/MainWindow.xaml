@@ -5,7 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Batto.ViewModels"
-        xmlns:models="clr-namespace:Batto.Models"
+        xmlns:models="clr-namespace:Batto.Models;assembly=Batto.Core"
         mc:Ignorable="d"
         Title="Batto - Bluetooth Battery Tray"
         Height="640" Width="1100"
