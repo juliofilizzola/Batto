@@ -34,4 +34,3 @@ jobs:
           
       - name: Test
         run: dotnet test Batto.slnx -c Release
-  
