@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HidSharp" Version="2.6.4" />
+    <ProjectReference Include="..\Batto.Core\Batto.Core.csproj" />
   </ItemGroup>
 
 </Project>

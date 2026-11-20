@@ -1,22 +1,27 @@
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Windows;
 using Batto.Bluetooth;
 using Batto.Logitech;
 using Batto.Models;
 using Batto.Notifications;
+using Batto.Platform;
 using Batto.Storage;
 
 namespace Batto.Battery;
 
 public class BatteryMonitor : IDisposable
 {
-    private readonly BluetoothManager _bluetoothManager;
-    private readonly GattBatteryReader _gattReader;
-    private readonly PnpBatteryReader _pnpReader;
+    private const int MinRefreshIntervalSeconds = 15;
+    private const int SecondsToMilliseconds = 1000;
+    private const string LogitechDiscoveryContext = "LogitechDeviceScanner.DiscoverAsync";
+    private static readonly TimeSpan BatteryReadTimeout = TimeSpan.FromSeconds(3);
+
+    private readonly IBluetoothDeviceSource _deviceSource;
+    private readonly IBatteryReader _batteryReader;
     private readonly NotificationManager _notificationManager;
     private readonly SettingsManager _settingsManager;
     private readonly LogitechDeviceScanner? _logitechScanner;
+    private readonly IUiDispatcher _uiDispatcher;
 
     private readonly System.Timers.Timer _refreshTimer;
     private readonly ConcurrentDictionary<string, BluetoothDeviceModel> _deviceMap = new();
@@ -29,30 +34,30 @@ public class BatteryMonitor : IDisposable
     public event Action? DevicesCollectionChanged;
 
     public BatteryMonitor(
-        BluetoothManager bluetoothManager,
-        GattBatteryReader gattReader,
-        PnpBatteryReader pnpReader,
+        IBluetoothDeviceSource deviceSource,
+        IBatteryReader batteryReader,
         NotificationManager notificationManager,
         SettingsManager settingsManager,
-        LogitechDeviceScanner? logitechScanner = null)
+        LogitechDeviceScanner? logitechScanner = null,
+        IUiDispatcher? uiDispatcher = null)
     {
-        _bluetoothManager = bluetoothManager;
-        _gattReader = gattReader;
-        _pnpReader = pnpReader;
+        _deviceSource = deviceSource;
+        _batteryReader = batteryReader;
         _notificationManager = notificationManager;
         _settingsManager = settingsManager;
         _logitechScanner = logitechScanner;
+        _uiDispatcher = uiDispatcher ?? ImmediateUiDispatcher.Instance;
 
-        // Wire GATT push notifications (real-time BLE updates)
-        _gattReader.BatteryLevelReceived += OnGattBatteryPush;
+        // Platform push updates (real-time BLE notifications on Windows)
+        _batteryReader.BatteryPushed += OnBatteryPushed;
 
-        // Wire Bluetooth discovery events
-        _bluetoothManager.DeviceDiscovered += OnBluetoothDeviceDiscovered;
-        _bluetoothManager.DeviceUpdated += OnBluetoothDeviceUpdated;
-        _bluetoothManager.DeviceRemoved += OnBluetoothDeviceRemoved;
+        // Platform device discovery events
+        _deviceSource.DeviceDiscovered += OnBluetoothDeviceDiscovered;
+        _deviceSource.DeviceUpdated += OnBluetoothDeviceUpdated;
+        _deviceSource.DeviceRemoved += OnBluetoothDeviceRemoved;
 
         // Background refresh timer
-        int intervalMs = Math.Max(15, _settingsManager.Settings.RefreshIntervalSeconds) * 1000;
+        int intervalMs = Math.Max(MinRefreshIntervalSeconds, _settingsManager.Settings.RefreshIntervalSeconds) * SecondsToMilliseconds;
         _refreshTimer = new System.Timers.Timer(intervalMs)
         {
             AutoReset = true,
@@ -63,7 +68,7 @@ public class BatteryMonitor : IDisposable
 
     public void Start()
     {
-        _bluetoothManager.StartDiscovery();
+        _deviceSource.StartDiscovery();
         _ = RefreshAllDevicesAsync();
     }
 
@@ -71,7 +76,7 @@ public class BatteryMonitor : IDisposable
     {
         _settingsManager.Settings.RefreshIntervalSeconds = seconds;
         _settingsManager.Save();
-        _refreshTimer.Interval = Math.Max(15, seconds) * 1000;
+        _refreshTimer.Interval = Math.Max(MinRefreshIntervalSeconds, seconds) * SecondsToMilliseconds;
     }
 
     private void OnBluetoothDeviceDiscovered(BluetoothDeviceModel device)
@@ -111,7 +116,7 @@ public class BatteryMonitor : IDisposable
     {
         if (_deviceMap.TryRemove(deviceId, out var removed))
         {
-            _gattReader.UnregisterDevice(deviceId);
+            _batteryReader.Forget(deviceId);
 
             RunOnUIThread(() =>
             {
@@ -127,17 +132,11 @@ public class BatteryMonitor : IDisposable
         }
     }
 
-    private void OnGattBatteryPush(string deviceId, int batteryLevel)
+    private void OnBatteryPushed(string deviceId, BatteryReading reading)
     {
         if (_deviceMap.TryGetValue(deviceId, out var device))
         {
-            device.BatteryLevel = batteryLevel;
-            device.HasBatteryInfo = true;
-            device.BatterySource = "GATT (0x180F)";
-            device.LastUpdated = DateTime.Now;
-
-            _notificationManager.CheckBatteryAlerts(device);
-            DeviceBatteryUpdated?.Invoke(device);
+            ApplyReading(device, reading);
         }
     }
 
@@ -159,7 +158,7 @@ public class BatteryMonitor : IDisposable
         }
     }
 
-    /// <summary>Adds Logitech devices paired to a receiver, which Windows does not list as Bluetooth devices.</summary>
+    /// <summary>Adds Logitech devices paired to a receiver, which the OS does not list as Bluetooth devices.</summary>
     private async Task SyncLogitechDevicesAsync()
     {
         if (_logitechScanner == null) return;
@@ -171,7 +170,7 @@ public class BatteryMonitor : IDisposable
         }
         catch (Exception ex)
         {
-            CrashLogger.Log("LogitechDeviceScanner.DiscoverAsync", ex);
+            CrashLogger.Log(LogitechDiscoveryContext, ex);
             return;
         }
 
@@ -183,7 +182,7 @@ public class BatteryMonitor : IDisposable
             {
                 Id = slot.Id,
                 Name = slot.Name,
-                Type = BluetoothManager.ClassifyDeviceType(slot.Name),
+                Type = DeviceClassifier.ClassifyDeviceType(slot.Name),
                 IsConnected = true
             };
             OnBluetoothDeviceDiscovered(model);
@@ -209,47 +208,11 @@ public class BatteryMonitor : IDisposable
                 return;
             }
 
-            // 1. Try Windows PnP property first (fast, works for Classic Bluetooth & connected audio headsets)
-            var pnpBattery = await _pnpReader.ReadBatteryAsync(device.Id);
-            if (pnpBattery.HasValue)
+            // Platform sources are tried in the order the platform defines (see IBatteryReader implementations)
+            var reading = await _batteryReader.ReadAsync(device.Id, BatteryReadTimeout);
+            if (reading != null)
             {
-                device.BatteryLevel = pnpBattery.Value;
-                device.HasBatteryInfo = true;
-                device.BatterySource = "Windows PnP";
-                device.LastUpdated = DateTime.Now;
-                _notificationManager.CheckBatteryAlerts(device);
-                DeviceBatteryUpdated?.Invoke(device);
-                return;
-            }
-
-            // 2. Classic and BLE devices: Windows keeps the battery on a node with the same address.
-            //    This is preferred over GATT because some keyboards report a stale GATT value.
-            var address = PnpBatteryReader.ExtractClassicAddress(device.Id) ?? PnpBatteryReader.ExtractLeAddress(device.Id);
-            if (address != null)
-            {
-                var serviceBattery = await _pnpReader.ReadBatteryByAddressAsync(address);
-                if (serviceBattery.HasValue)
-                {
-                    device.BatteryLevel = serviceBattery.Value;
-                    device.HasBatteryInfo = true;
-                    device.BatterySource = "Windows PnP (serviço do dispositivo)";
-                    device.LastUpdated = DateTime.Now;
-                    _notificationManager.CheckBatteryAlerts(device);
-                    DeviceBatteryUpdated?.Invoke(device);
-                    return;
-                }
-            }
-
-            // 3. Try GATT Battery Service 0x180F (for BLE devices, mice, keyboards) with 3s timeout
-            var gattBattery = await _gattReader.ReadBatteryAsync(device.Id, TimeSpan.FromSeconds(3));
-            if (gattBattery.HasValue)
-            {
-                device.BatteryLevel = gattBattery.Value;
-                device.HasBatteryInfo = true;
-                device.BatterySource = "GATT (0x180F)";
-                device.LastUpdated = DateTime.Now;
-                _notificationManager.CheckBatteryAlerts(device);
-                DeviceBatteryUpdated?.Invoke(device);
+                ApplyReading(device, reading);
                 return;
             }
 
@@ -281,13 +244,18 @@ public class BatteryMonitor : IDisposable
 
         if (level.HasValue)
         {
-            device.BatteryLevel = level.Value;
-            device.HasBatteryInfo = true;
-            device.BatterySource = "Logitech HID++";
-            device.LastUpdated = DateTime.Now;
-            _notificationManager.CheckBatteryAlerts(device);
-            DeviceBatteryUpdated?.Invoke(device);
+            ApplyReading(device, new BatteryReading(level.Value, "Logitech HID++"));
         }
+    }
+
+    private void ApplyReading(BluetoothDeviceModel device, BatteryReading reading)
+    {
+        device.BatteryLevel = reading.Level;
+        device.HasBatteryInfo = true;
+        device.BatterySource = reading.Source;
+        device.LastUpdated = DateTime.Now;
+        _notificationManager.CheckBatteryAlerts(device);
+        DeviceBatteryUpdated?.Invoke(device);
     }
 
     public void SetDeviceTrayVisibility(BluetoothDeviceModel device, bool isVisible)
@@ -358,26 +326,16 @@ public class BatteryMonitor : IDisposable
         });
     }
 
-    private static void RunOnUIThread(Action action)
-    {
-        if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
-        {
-            Application.Current.Dispatcher.Invoke(action);
-        }
-        else
-        {
-            action();
-        }
-    }
+    private void RunOnUIThread(Action action) => _uiDispatcher.Invoke(action);
 
     public void Dispose()
     {
         _refreshTimer.Dispose();
-        _gattReader.BatteryLevelReceived -= OnGattBatteryPush;
-        _bluetoothManager.DeviceDiscovered -= OnBluetoothDeviceDiscovered;
-        _bluetoothManager.DeviceUpdated -= OnBluetoothDeviceUpdated;
-        _bluetoothManager.DeviceRemoved -= OnBluetoothDeviceRemoved;
-        _bluetoothManager.Dispose();
-        _gattReader.Dispose();
+        _batteryReader.BatteryPushed -= OnBatteryPushed;
+        _deviceSource.DeviceDiscovered -= OnBluetoothDeviceDiscovered;
+        _deviceSource.DeviceUpdated -= OnBluetoothDeviceUpdated;
+        _deviceSource.DeviceRemoved -= OnBluetoothDeviceRemoved;
+        _deviceSource.Dispose();
+        _batteryReader.Dispose();
     }
 }
