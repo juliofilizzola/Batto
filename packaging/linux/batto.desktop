@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Batto
+GenericName=Monitor de bateria Bluetooth
+Comment=Bateria dos dispositivos Bluetooth na bandeja
+Exec=batto
+Icon=batto
+Terminal=false
+Categories=Utility;
+Keywords=bluetooth;bateria;battery;
+StartupNotify=false

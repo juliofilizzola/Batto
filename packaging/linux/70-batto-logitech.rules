@@ -1,0 +1,4 @@
+# Lets the logged-in user read Logitech HID++ receivers (vendor 046d) through hidraw,
+# so Batto can query paired devices without root. Install to /etc/udev/rules.d/ and reload with:
+#   sudo udevadm control --reload-rules && sudo udevadm trigger --subsystem-match=hidraw
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"

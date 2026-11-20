@@ -1,0 +1,33 @@
+# Maintainer: Julio Filizzola
+# Local build from this checkout (no release tarball yet).
+# Build and install: cd packaging/linux && makepkg -si
+pkgname=batto
+pkgver=0.0.4
+pkgrel=1
+pkgdesc="Monitor de bateria Bluetooth na bandeja (BlueZ, StatusNotifierItem)"
+arch=('x86_64')
+url="https://github.com/juliofilizzola/Batto"
+license=('MIT')
+depends=('bluez' 'icu' 'fontconfig' 'libxkbcommon' 'wayland' 'libx11')
+makedepends=('dotnet-sdk-10.0')
+options=('!debug' '!strip')
+source=()
+sha256sums=()
+
+_root="${startdir}/../.."
+
+build() {
+    cd "$_root"
+    export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_CLI_HOME="$srcdir/.dotnet"
+    dotnet publish src/Batto.Linux/Batto.Linux.csproj \
+        -c Release -r linux-x64 --self-contained true \
+        -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+        -o "$srcdir/publish"
+}
+
+package() {
+    install -Dm755 "$srcdir/publish/batto" "$pkgdir/usr/bin/batto"
+    install -Dm644 "$_root/packaging/linux/batto.desktop" "$pkgdir/usr/share/applications/batto.desktop"
+    install -Dm644 "$_root/src/Batto.Linux/Assets/batto.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/batto.png"
+    install -Dm644 "$_root/packaging/linux/70-batto-logitech.rules" "$pkgdir/usr/lib/udev/rules.d/70-batto-logitech.rules"
+}

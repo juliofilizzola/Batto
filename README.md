@@ -119,6 +119,30 @@ Ou diretamente pelo menu **Configurações do Windows > Aplicativos > Aplicativo
 
 ---
 
+## 🐧 Linux (Garuda, Arch, Ubuntu)
+
+O port Linux usa BlueZ (D-Bus), StatusNotifierItem (KDE Plasma e outros hosts SNI) e Avalonia. Requisitos: BlueZ 5.56 ou superior, e um host de bandeja SNI (KDE Plasma, Waybar; no GNOME, a extensão AppIndicator).
+
+### Instalação por usuário (qualquer distro com .NET 10 SDK)
+```bash
+scripts/linux/build.sh                 # gera publish/linux-x64/batto (executável único)
+scripts/linux/install.sh               # instala em ~/.local (binário, atalho e ícone)
+scripts/linux/install.sh --with-udev   # também instala a regra udev do receptor Logitech (sudo)
+scripts/linux/uninstall.sh             # remove a instalação; --purge remove também as configurações
+```
+O executável é autocontido: a máquina de destino não precisa do .NET instalado.
+
+### Arch / Garuda (pacote local)
+```bash
+cd packaging/linux && makepkg -si
+```
+O `PKGBUILD` compila a partir deste checkout e instala em `/usr/bin/batto`, com atalho, ícone e regra udev em `/usr/lib/udev/rules.d/`.
+
+### Desenvolvimento
+Abra `src/Batto.Linux/Batto.Linux.csproj` no Rider ou no Visual Studio Code. Diagnóstico sem interface: `batto --probe-bluez` (lista dispositivos e bateria) e `batto --probe-notify` (envia uma notificação de teste).
+
+---
+
 ## 📌 Ícones Fora do Menu Oculto (Windows 11)
 
 Por padrão, o Windows 11 coloca novos ícones de bandeja dentro do menu oculto (`^`).
