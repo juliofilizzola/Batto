@@ -191,10 +191,10 @@ public class BatteryMonitor : IDisposable
 
     public List<BluetoothDeviceModel> GetDevicesForTray()
     {
+        // Only connected devices get a segment: a disconnected one keeps its "Na Barra" flag but must not take up a ring slot.
         return _deviceMap.Values
-            .Where(d => d.IsTrayVisible)
+            .Where(d => d.IsTrayVisible && d.IsConnected)
             .OrderByDescending(d => d.Priority)
-            .ThenByDescending(d => d.IsConnected)
             .ToList();
     }
 
