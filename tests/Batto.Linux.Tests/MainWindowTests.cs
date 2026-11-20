@@ -81,7 +81,7 @@ public class MainWindowTests
         frame.Render(window);
 
         string path = Path.Combine(Path.GetTempPath(), ScreenshotFileName);
-        frame.Save(path);
+        frame.Save(path, new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
         Assert.True(File.Exists(path));
 
         viewModel.IsSettingsTab = true;
@@ -89,7 +89,7 @@ public class MainWindowTests
         var settingsFrame = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)window.Width, (int)window.Height));
         settingsFrame.Render(window);
         string settingsPath = Path.Combine(Path.GetTempPath(), SettingsScreenshotFileName);
-        settingsFrame.Save(settingsPath);
+        settingsFrame.Save(settingsPath, new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
         Assert.True(File.Exists(settingsPath));
         window.Close();
     }
