@@ -21,11 +21,8 @@ public class GattBatteryReader : IDisposable
         using var cts = new CancellationTokenSource(timeout);
         try
         {
-            var bleTask = BluetoothLEDevice.FromIdAsync(deviceId).AsTask(cts.Token);
-            var bleDevice = await bleTask;
+            var bleDevice = await GetOrConnectDeviceAsync(deviceId, cts.Token);
             if (bleDevice == null) return null;
-
-            _activeDevices[deviceId] = bleDevice;
 
             var servicesResult = await bleDevice.GetGattServicesForUuidAsync(BatteryServiceUuid, BluetoothCacheMode.Uncached).AsTask(cts.Token);
             if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
@@ -70,6 +67,30 @@ public class GattBatteryReader : IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Reuses the open BLE device for this id. Opening a new one on every poll left the previous object alive
+    /// (holding its connection) until the GC ran. A new one is opened only when the old one is no longer connected.
+    /// </summary>
+    private async Task<BluetoothLEDevice?> GetOrConnectDeviceAsync(string deviceId, CancellationToken token)
+    {
+        if (_activeDevices.TryGetValue(deviceId, out var existing) &&
+            existing.ConnectionStatus == BluetoothConnectionStatus.Connected)
+        {
+            return existing;
+        }
+
+        // Stale or missing: release the old device and its notification subscription before opening a new one,
+        // so the subscription is set up again on the new device.
+        UnregisterDevice(deviceId);
+
+        var device = await BluetoothLEDevice.FromIdAsync(deviceId).AsTask(token);
+        if (device != null)
+        {
+            _activeDevices[deviceId] = device;
+        }
+        return device;
     }
 
     private async Task TrySubscribeNotificationsAsync(string deviceId, GattCharacteristic characteristic)
