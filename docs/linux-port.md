@@ -30,7 +30,7 @@ Estas partes não dependem de Windows e podem ser movidas quase sem mudança (ou
 | `src/Batto/ViewModels/MainViewModel.cs` | ViewModel da janela | Reaproveitável com a UI nova |
 | `tests/Batto.Tests/` | Testes unitários | Os de lógica de faixas, ordenação e configurações valem direto |
 
-**Recomendação:** extrair a lógica compartilhada para um projeto `Batto.Core` (sem UI e sem plataforma), com interfaces para leitura de bateria, bandeja, notificações e autostart. Assim, o Windows e o Linux implementam só a plataforma.
+**Status: feito.** A lógica compartilhada está em `src/Batto.Core/` (`net10.0`, sem WPF/WinRT), com as interfaces `IBluetoothDeviceSource`, `IBatteryReader`, `IAutostart` e `IUiDispatcher`. O app Windows implementa essas interfaces (`WindowsBatteryReader`, `BluetoothManager`, `WindowsAutostart`, `WpfUiDispatcher`) e faz a composição em `App.xaml.cs`. Um port Linux implementa as mesmas interfaces, sem tocar na Core.
 
 ---
 

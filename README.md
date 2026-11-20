@@ -49,31 +49,25 @@ O **Batto** exibe o nível de bateria dos seus fones, mouses, teclados e control
 ## 🏗 Arquitetura dos Módulos
 
 ```
-src/Batto/
+src/Batto.Core/          # Núcleo multiplataforma (net10.0, sem WPF nem WinRT)
 ├── Models/              # Modelos de dados, faixas de bateria e configurações
-│   ├── BluetoothDeviceModel.cs
-│   ├── DeviceType.cs
-│   ├── BatteryLevelRange.cs
-│   └── AppSettings.cs
-├── Native/              # P/Invoke Win32 (Shell_NotifyIcon, HICON, TaskbarCreated)
-│   └── NativeMethods.cs
-├── Bluetooth/           # Descoberta e leitura de bateria (GATT + PnP)
-│   ├── BluetoothManager.cs
-│   ├── GattBatteryReader.cs
-│   └── PnpBatteryReader.cs
-├── Battery/             # Orquestração do ciclo de vida e monitoramento
-│   └── BatteryMonitor.cs
-├── Tray/                # Gerenciador da System Tray e renderizador GDI+
-│   ├── TrayManager.cs
-│   └── IconGenerator.cs
+├── Logitech/            # Protocolo HID++ e leitor de receptores Logitech (HidSharp)
+├── Battery/             # BatteryMonitor + interface IBatteryReader
+├── Bluetooth/           # IBluetoothDeviceSource e classificador de tipo por nome
 ├── Notifications/       # Sistema de alertas com controle de frequência
-│   └── NotificationManager.cs
-├── Storage/             # Persistência JSON e registro de inicialização
-│   └── SettingsManager.cs
+├── Storage/             # Persistência JSON + interface IAutostart
+├── Platform/            # IUiDispatcher (despacho para a thread da UI)
+└── CrashLogger.cs
+
+src/Batto/               # App Windows (WPF) — implementa as interfaces da Core
+├── Bluetooth/           # WinRT: BluetoothManager, WindowsBatteryReader, GATT e PnP
+├── Storage/             # WindowsAutostart (chave Run do registro)
+├── Platform/            # WpfUiDispatcher
+├── Native/              # P/Invoke Win32 (Shell_NotifyIcon, HICON, TaskbarCreated)
+├── Tray/                # Gerenciador da System Tray e renderizador GDI+
 ├── ViewModels/          # ViewModel com MVVM e comandos
-│   └── MainViewModel.cs
 ├── MainWindow.xaml      # Interface WPF moderna estilo Windows 11
-├── App.xaml             # Ciclo de vida e instância única (Mutex)
+├── App.xaml             # Composição das dependências, ciclo de vida e instância única
 └── app.manifest         # Manifesto DPI PerMonitorV2
 ```
 
