@@ -14,7 +14,6 @@ public sealed class StatusNotifierHost
     private const string WatcherInterface = "org.kde.StatusNotifierWatcher";
     private const string RegisterMember = "RegisterStatusNotifierItem";
     private const string ItemNameFormat = "org.kde.StatusNotifierItem-{0}-1";
-    private const int PixmapSize = 32;
     private const string NoDevicesText = "Nenhum dispositivo conectado";
     private const string TooltipLineFormat = "{0}: {1}%";
     private const string TooltipUnknownLevel = "{0}: sem leitura";
@@ -46,8 +45,7 @@ public sealed class StatusNotifierHost
     /// <summary>Redraws the icon and tooltip from the devices that are visible in the tray.</summary>
     public void Update(IReadOnlyList<BluetoothDeviceModel> trayDevices)
     {
-        byte[] pixmap = TrayIconRenderer.RenderArgbPixmap(trayDevices, PixmapSize);
-        _item.Update(PixmapSize, pixmap, BuildTooltip(trayDevices));
+        _item.Update(TrayIconRenderer.RenderAllSizes(trayDevices), BuildTooltip(trayDevices));
     }
 
     private static string BuildTooltip(IReadOnlyList<BluetoothDeviceModel> devices)

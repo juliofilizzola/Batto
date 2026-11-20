@@ -85,8 +85,8 @@
     <Border DockPanel.Dock="Top" Background="#202020" BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="20,14">
       <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
         <StackPanel Orientation="Horizontal" Spacing="14">
-          <Border Width="38" Height="38" CornerRadius="8" Background="#0078D4">
-            <TextBlock Text="◔" FontSize="20" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <Border Width="38" Height="38" CornerRadius="8" Background="#0078D4" Padding="5">
+            <Image Source="avares://batto/Assets/batto.png" Stretch="Uniform" />
           </Border>
           <StackPanel Spacing="2">
             <StackPanel Orientation="Horizontal" Spacing="8">

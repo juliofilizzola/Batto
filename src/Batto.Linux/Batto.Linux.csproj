@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="Assets\batto.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Batto.Core\Batto.Core.csproj" />
   </ItemGroup>
 

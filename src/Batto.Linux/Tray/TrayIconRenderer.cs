@@ -5,19 +5,25 @@ namespace Batto.Linux.Tray;
 
 /// <summary>
 /// Draws the Batto tray icon: a ring split into one segment per visible device, each filled with its battery level.
-/// Same layout as the Windows IconGenerator, rendered with SkiaSharp and exported as the ARGB32 pixmap of StatusNotifierItem.
+/// Same look as the official batto.ico: an opaque grey track, segments in the battery range colours, stroke about
+/// a fifth of the diameter. Exported as ARGB32 pixmaps for StatusNotifierItem, one per size.
 /// </summary>
 public static class TrayIconRenderer
 {
+    /// <summary>Sizes exported to the tray. Hosts pick the closest one, so every panel gets a sharp ring.</summary>
+    public static readonly IReadOnlyList<int> PixmapSizes = [16, 22, 24, 32, 48];
+
     private const float SegmentGapDegrees = 12f;
     private const float StartAngleDegrees = -90f;
-    private const byte TrackAlpha = 70;
+    private const float StrokeRatio = 0.18f;
     private const byte BytesPerPixel = 4;
-    private const float ThickStroke = 4.5f;
-    private const float MediumStroke = 3.8f;
-    private const float ThinStroke = 3.2f;
-    private const int ThickStrokeMinSize = 24;
-    private const int MediumStrokeMinSize = 20;
+
+    /// <summary>Track colour of batto.ico (#3A3A3A), opaque so it reads on light and dark panels.</summary>
+    private static readonly SKColor TrackColor = new(0x3A, 0x3A, 0x3A);
+
+    /// <summary>Renders the icon at every tray size.</summary>
+    public static IReadOnlyList<(int Size, byte[] Argb)> RenderAllSizes(IReadOnlyList<BluetoothDeviceModel> devices) =>
+        PixmapSizes.Select(size => (size, RenderArgbPixmap(devices, size))).ToList();
 
     /// <summary>Renders the icon and returns the pixels as ARGB, most significant byte first (the SNI wire format).</summary>
     public static byte[] RenderArgbPixmap(IReadOnlyList<BluetoothDeviceModel> devices, int size)
@@ -33,11 +39,11 @@ public static class TrayIconRenderer
 
     private static void DrawRing(SKCanvas canvas, IReadOnlyList<BluetoothDeviceModel> devices, int size)
     {
-        float stroke = size >= ThickStrokeMinSize ? ThickStroke : (size >= MediumStrokeMinSize ? MediumStroke : ThinStroke);
-        float inset = stroke / 2f + 0.5f;
+        float stroke = size * StrokeRatio;
+        float inset = stroke / 2f;
         var box = new SKRect(inset, inset, size - inset, size - inset);
 
-        using var track = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = stroke, Color = new SKColor(255, 255, 255, TrackAlpha) };
+        using var track = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = stroke, Color = TrackColor };
 
         if (devices.Count == 0)
         {

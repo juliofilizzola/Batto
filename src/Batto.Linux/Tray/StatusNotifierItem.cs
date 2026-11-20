@@ -51,8 +51,7 @@ public sealed class StatusNotifierItem : IPathMethodHandler
 
     private readonly DBusConnection _connection;
     private readonly object _gate = new();
-    private int _pixmapSize;
-    private byte[] _pixmap = [];
+    private IReadOnlyList<(int Size, byte[] Argb)> _pixmaps = [];
     private string _tooltipText = string.Empty;
 
     /// <summary>Left click on the tray icon: show the main window.</summary>
@@ -66,17 +65,16 @@ public sealed class StatusNotifierItem : IPathMethodHandler
         _connection = connection;
     }
 
-    /// <summary>Replaces the icon (a square ARGB pixmap of the given side) and tooltip, and tells the host to read them again.</summary>
-    public void Update(int pixmapSize, byte[] pixmap, string tooltipText)
+    /// <summary>Replaces the icon (one square ARGB pixmap per size) and tooltip, and tells the host to read them again.</summary>
+    public void Update(IReadOnlyList<(int Size, byte[] Argb)> pixmaps, string tooltipText)
     {
         bool iconChanged;
         bool tooltipChanged;
         lock (_gate)
         {
-            iconChanged = _pixmapSize != pixmapSize || !_pixmap.AsSpan().SequenceEqual(pixmap);
+            iconChanged = !SamePixmaps(_pixmaps, pixmaps);
             tooltipChanged = _tooltipText != tooltipText;
-            _pixmapSize = pixmapSize;
-            _pixmap = pixmap;
+            _pixmaps = pixmaps;
             _tooltipText = tooltipText;
         }
 
@@ -193,13 +191,11 @@ public sealed class StatusNotifierItem : IPathMethodHandler
 
     private VariantValue? ReadProperty(string property)
     {
-        int size;
-        byte[] pixmap;
+        IReadOnlyList<(int Size, byte[] Argb)> pixmaps;
         string tooltipText;
         lock (_gate)
         {
-            size = _pixmapSize;
-            pixmap = _pixmap;
+            pixmaps = _pixmaps;
             tooltipText = _tooltipText;
         }
 
@@ -211,10 +207,10 @@ public sealed class StatusNotifierItem : IPathMethodHandler
             "Status" => VariantValue.String(StatusActive),
             "WindowId" => VariantValue.Int32(0),
             "IconName" => VariantValue.String(string.Empty),
-            "IconPixmap" => PixmapList(size, pixmap),
+            "IconPixmap" => PixmapList(pixmaps),
             "ToolTip" => VariantValue.Struct(
                 VariantValue.String(string.Empty),
-                PixmapList(size, pixmap),
+                PixmapList(pixmaps),
                 VariantValue.String(ItemTitle),
                 VariantValue.String(tooltipText)),
             "ItemIsMenu" => VariantValue.Bool(false),
@@ -223,12 +219,25 @@ public sealed class StatusNotifierItem : IPathMethodHandler
         };
     }
 
-    /// <summary>The a(iiay) list: one (width, height, ARGB bytes) entry.</summary>
-    private static VariantValue PixmapList(int size, byte[] pixmap)
+    /// <summary>The a(iiay) list: one (width, height, ARGB bytes) entry per size.</summary>
+    private static VariantValue PixmapList(IReadOnlyList<(int Size, byte[] Argb)> pixmaps)
     {
         var list = new Array<Struct<int, int, Array<byte>>>();
-        list.Add(Struct.Create(size, size, new Array<byte>(pixmap)));
+        foreach (var (size, argb) in pixmaps)
+        {
+            list.Add(Struct.Create(size, size, new Array<byte>(argb)));
+        }
         return list;
+    }
+
+    private static bool SamePixmaps(IReadOnlyList<(int Size, byte[] Argb)> a, IReadOnlyList<(int Size, byte[] Argb)> b)
+    {
+        if (a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i].Size != b[i].Size || !a[i].Argb.AsSpan().SequenceEqual(b[i].Argb)) return false;
+        }
+        return true;
     }
 
     private static void ReplyEmpty(MethodContext context)
