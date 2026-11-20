@@ -9,6 +9,10 @@
     <RootNamespace>Batto.Linux</RootNamespace>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <Version>0.0.4</Version>
+    <!-- Tray app with tiny allocations: background GC threads and their reserved memory cost more than they save -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <!-- All formats are explicit (HH:mm:ss, hex), so ICU is not needed; skipping it avoids loading libicu -->
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Interop;
 using Batto.Models;
@@ -10,7 +9,6 @@ namespace Batto;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
-    private bool _isRealExit;
 
     public MainWindow(MainViewModel viewModel)
     {
@@ -43,30 +41,11 @@ public partial class MainWindow : Window
         }
     }
 
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        CrashLogger.Log($"MainWindow.OnClosing called. _isRealExit={_isRealExit}", null);
-        if (!_isRealExit)
-        {
-            // Minimize to tray instead of closing process
-            e.Cancel = true;
-            Hide();
-        }
-        else
-        {
-            base.OnClosing(e);
-        }
-    }
-
-    public void RequestRealClose()
-    {
-        _isRealExit = true;
-        Close();
-    }
-
+    // Closing does not exit the app (ShutdownMode is OnExplicitShutdown): the tray keeps running and
+    // App builds a new window on the next open. Destroying it frees the visual tree while only the tray is used.
     private void OnMinimizeToTrayClicked(object sender, RoutedEventArgs e)
     {
-        Hide();
+        Close();
     }
 
     private void OnTrayVisibilityToggled(object sender, RoutedEventArgs e)

@@ -9,6 +9,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/batto.ico</ApplicationIcon>
     <Version>0.0.4</Version>
+    <!-- Tray app with tiny allocations: background GC threads and their reserved memory cost more than they save -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
