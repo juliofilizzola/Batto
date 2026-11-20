@@ -23,6 +23,7 @@ public partial class App : Application
     private WindowsBatteryReader? _batteryReader;
     private BatteryMonitor? _batteryMonitor;
     private TrayManager? _trayManager;
+    private MainViewModel? _mainViewModel;
     private MainWindow? _mainWindow;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -58,7 +59,7 @@ public partial class App : Application
 
         base.OnStartup(e);
 
-        // Prevent application from shutting down when MainWindow is hidden
+        // The app lives in the tray: closing the main window must not shut it down
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // 2. Initialize Core Services
@@ -88,23 +89,15 @@ public partial class App : Application
             OpenMainWindow,
             ExitApplication);
 
-        // 4. Initialize Main Window
-        var viewModel = new MainViewModel(_batteryMonitor, _settingsManager, ExitApplication);
-        _mainWindow = new MainWindow(viewModel);
-        MainWindow = _mainWindow;
+        // 4. The view model lives as long as the app; the window is only built when it is opened
+        _mainViewModel = new MainViewModel(_batteryMonitor, _settingsManager, ExitApplication);
 
         // 5. Start Background Monitoring
         _batteryMonitor.Start();
 
-        // 6. Handle CLI Flags
+        // 6. Handle CLI Flags: --minimized (autostart) never builds the window
         bool startMinimized = e.Args.Contains("--minimized");
-        if (startMinimized)
-        {
-            _mainWindow.WindowState = WindowState.Minimized;
-            _mainWindow.Show();
-            _mainWindow.Hide();
-        }
-        else
+        if (!startMinimized)
         {
             OpenMainWindow();
         }
@@ -116,22 +109,50 @@ public partial class App : Application
     {
         Dispatcher.Invoke(() =>
         {
-            if (_mainWindow != null)
+            if (_mainViewModel == null) return;
+
+            if (_mainWindow == null)
             {
-                if (!_mainWindow.IsVisible)
-                {
-                    _mainWindow.Show();
-                }
-
-                if (_mainWindow.WindowState == WindowState.Minimized)
-                {
-                    _mainWindow.WindowState = WindowState.Normal;
-                }
-
-                _mainWindow.Activate();
-                _mainWindow.Focus();
+                _mainWindow = new MainWindow(_mainViewModel);
+                _mainWindow.Closed += OnMainWindowClosed;
+                MainWindow = _mainWindow;
             }
+
+            if (!_mainWindow.IsVisible)
+            {
+                _mainWindow.Show();
+            }
+
+            if (_mainWindow.WindowState == WindowState.Minimized)
+            {
+                _mainWindow.WindowState = WindowState.Normal;
+            }
+
+            _mainWindow.Activate();
+            _mainWindow.Focus();
         });
+    }
+
+    /// <summary>
+    /// Closing the window to the tray destroys it, so its visual tree can be collected while only the tray runs.
+    /// The view model stays, so the selected tab and status survive the next open.
+    /// </summary>
+    private void OnMainWindowClosed(object? sender, EventArgs e)
+    {
+        if (_mainWindow != null)
+        {
+            _mainWindow.Closed -= OnMainWindowClosed;
+            _mainWindow = null;
+        }
+        MainWindow = null;
+
+        // With only the tray left the app allocates almost nothing, so the GC would take a long time to run on its own.
+        // One compacting collection once the dispatcher is idle returns the closed window's memory right away.
+        Dispatcher.BeginInvoke(() =>
+        {
+            System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+        }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
     }
 
     public void ExitApplication()
@@ -139,7 +160,7 @@ public partial class App : Application
         CrashLogger.Log("App.ExitApplication called", null);
         Dispatcher.Invoke(() =>
         {
-            _mainWindow?.RequestRealClose();
+            _mainWindow?.Close();
             Shutdown();
         });
     }
