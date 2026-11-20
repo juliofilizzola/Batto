@@ -1,0 +1,285 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:Batto.Linux.UI"
+        xmlns:models="clr-namespace:Batto.Models;assembly=Batto.Core"
+        x:Class="Batto.Linux.UI.MainWindow"
+        x:DataType="ui:MainViewModel"
+        Title="Batto - Bluetooth Battery Tray"
+        Width="1100"
+        Height="680"
+        MinWidth="760"
+        MinHeight="480"
+        Background="#181818"
+        Foreground="#F3F3F3"
+        RequestedThemeVariant="Dark">
+
+  <Window.Styles>
+    <!-- Switches show only their label, without the On/Off text the default template adds -->
+    <Style Selector="ToggleSwitch">
+      <Setter Property="OnContent" Value="" />
+      <Setter Property="OffContent" Value="" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#232323" />
+      <Setter Property="BorderBrush" Value="#333333" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="16,14" />
+    </Style>
+    <Style Selector="Border.chip">
+      <Setter Property="Background" Value="#252525" />
+      <Setter Property="BorderBrush" Value="#353535" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10,4" />
+      <Setter Property="Margin" Value="4,0" />
+    </Style>
+    <Style Selector="Border.pill">
+      <Setter Property="Background" Value="#2C2C2C" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="Margin" Value="10,0,0,0" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#888888" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.subtle">
+      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="Foreground" Value="#9CA3AF" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.settingTitle">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.secondary">
+      <Setter Property="Background" Value="#2C2C2C" />
+      <Setter Property="Foreground" Value="#E5E7EB" />
+      <Setter Property="BorderBrush" Value="#404040" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="12,6" />
+    </Style>
+    <Style Selector="ToggleButton.nav">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#9CA3AF" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="ToggleButton.nav:checked">
+      <Setter Property="Background" Value="#2E384D" />
+      <Setter Property="Foreground" Value="#60A5FA" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <!-- Header: brand and actions on top, summary chips below -->
+    <Border DockPanel.Dock="Top" Background="#202020" BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="20,14">
+      <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="14">
+          <Border Width="38" Height="38" CornerRadius="8" Background="#0078D4">
+            <TextBlock Text="◔" FontSize="20" Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Spacing="2">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="Batto" FontSize="18" FontWeight="Bold" Foreground="#FFFFFF" />
+              <Border Background="#2E384D" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                <TextBlock Text="System Tray" FontSize="11" FontWeight="SemiBold" Foreground="#60A5FA" />
+              </Border>
+            </StackPanel>
+            <TextBlock Text="Monitor de bateria Bluetooth na barra de tarefas" FontSize="12" Foreground="#9CA3AF" />
+          </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Button Classes="secondary" Content="🔄 Atualizar" Command="{Binding RefreshCommand}" />
+          <ToggleButton Classes="nav" Content="📱 Dispositivos" IsChecked="{Binding IsDevicesTab}" />
+          <ToggleButton Classes="nav" Content="⚙ Configurações" IsChecked="{Binding IsSettingsTab}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
+          <Border Classes="chip">
+            <TextBlock FontSize="12" Foreground="#D1D5DB">
+              <Run Text="Dispositivos: " />
+              <Run Text="{Binding TotalDevices}" FontWeight="Bold" Foreground="#FFFFFF" />
+            </TextBlock>
+          </Border>
+          <Border Classes="chip">
+            <TextBlock FontSize="12" Foreground="#D1D5DB">
+              <Run Text="Conectados: " />
+              <Run Text="{Binding ConnectedDevices}" FontWeight="Bold" Foreground="#22C55E" />
+            </TextBlock>
+          </Border>
+          <Border Classes="chip">
+            <TextBlock FontSize="12" Foreground="#D1D5DB">
+              <Run Text="Na Barra: " />
+              <Run Text="{Binding TrayDevices}" FontWeight="Bold" Foreground="#38BDF8" />
+            </TextBlock>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Footer: status line and minimize action -->
+    <Border DockPanel.Dock="Bottom" Background="#1D1D1D" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" Padding="20,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding StatusMessage}" FontSize="12" Foreground="#9CA3AF" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="secondary" Content="Minimizar para a Bandeja" Command="{Binding MinimizeCommand}" />
+      </Grid>
+    </Border>
+
+    <!-- Tabs share the remaining area; a Grid stops the DockPanel from sizing them by content -->
+    <Grid>
+    <!-- Devices tab -->
+    <ScrollViewer IsVisible="{Binding IsDevicesTab}" Padding="20,16">
+      <StackPanel Spacing="10">
+        <TextBlock Classes="sectionTitle" Text="Dispositivos Bluetooth Pareados" Margin="4,0,0,4" />
+        <ItemsControl ItemsSource="{Binding Devices}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="ui:DeviceCardViewModel">
+              <Border Classes="card" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+
+                  <Border Grid.Column="0" Width="48" Height="48" CornerRadius="8" Background="#2C2C2C" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding TypeGlyph}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" Foreground="#FFFFFF" TextTrimming="CharacterEllipsis" />
+                      <Border Classes="pill">
+                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Foreground="{Binding StatusBrush}" />
+                      </Border>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Classes="muted" Text="Fonte:" />
+                        <TextBlock Classes="subtle" Text="{Binding SourceText}" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Classes="muted" Text="Última atualização:" />
+                        <TextBlock Classes="subtle" Text="{Binding LastUpdatedText}" />
+                      </StackPanel>
+                    </StackPanel>
+                  </StackPanel>
+
+                  <Border Grid.Column="2" Background="#1D222A" BorderBrush="#353E4D" BorderThickness="1" CornerRadius="8"
+                          Padding="14,8" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="{Binding BatteryText}" FontSize="16" FontWeight="Bold" Foreground="{Binding BatteryBrush}" VerticalAlignment="Center" />
+                  </Border>
+
+                  <StackPanel Grid.Column="3" Spacing="8" VerticalAlignment="Center" MinWidth="200">
+                    <ComboBox ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding SelectedType}" HorizontalAlignment="Stretch">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:DeviceTypeOption">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Glyph}" Width="20" />
+                            <TextBlock Text="{Binding Label}" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ToggleSwitch OnContent="Na Barra" OffContent="Na Barra" IsChecked="{Binding IsTrayVisible}" IsEnabled="{Binding IsConnected}" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Classes="muted" Text="Prioridade" VerticalAlignment="Center" Margin="0,0,6,0" />
+                      <Button Classes="secondary" Content="▲" Command="{Binding PriorityUpCommand}" Padding="8,2" ToolTip.Tip="Mostrar antes na barra" />
+                      <Button Classes="secondary" Content="▼" Command="{Binding PriorityDownCommand}" Padding="8,2" ToolTip.Tip="Mostrar depois na barra" />
+                      <TextBlock Classes="subtle" Text="{Binding Priority}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Settings tab -->
+    <ScrollViewer IsVisible="{Binding IsSettingsTab}" Padding="20,16">
+      <StackPanel Spacing="10" MaxWidth="760" HorizontalAlignment="Left">
+        <TextBlock Classes="sectionTitle" Text="Preferências e Inicialização" Margin="4,0,0,4" />
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="settingTitle" Text="Intervalo de Atualização da Bateria" />
+              <TextBlock Classes="muted" Text="Frequência em segundos para checagem em segundo plano" />
+            </StackPanel>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding RefreshIntervalOptions}" SelectedItem="{Binding RefreshIntervalSeconds}" MinWidth="140" />
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="settingTitle" Text="Iniciar com o sistema" />
+              <TextBlock Classes="muted" Text="Inicia o Batto automaticamente ao entrar na sessão (XDG autostart)" />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartWithSystem}" />
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="settingTitle" Text="Iniciar minimizado" />
+              <TextBlock Classes="muted" Text="Mantém a janela oculta ao iniciar, exibindo apenas o ícone na bandeja" />
+            </StackPanel>
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding StartMinimized}" />
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="settingTitle" Text="Notificações" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Alerta de bateria baixa (abaixo de 20%)" Foreground="#CCCCCC" VerticalAlignment="Center" />
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyLowBattery}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Alerta de bateria crítica (abaixo de 10%)" Foreground="#CCCCCC" VerticalAlignment="Center" />
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyCriticalBattery}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Notificar quando dispositivo conectar" Foreground="#CCCCCC" VerticalAlignment="Center" />
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyConnected}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Notificar quando dispositivo desconectar" Foreground="#CCCCCC" VerticalAlignment="Center" />
+              <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotifyDisconnected}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="settingTitle" Text="Gerenciar Aplicativo" />
+              <TextBlock Classes="muted" Text="Fechar a janela minimiza o Batto para a bandeja do sistema." />
+            </StackPanel>
+            <Button Grid.Column="1" Content="Encerrar o Batto" Command="{Binding QuitCommand}"
+                    Background="#7F1D1D" Foreground="#FCA5A5" FontWeight="SemiBold" Padding="14,6" />
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="settingTitle" Text="Batto" FontSize="18" />
+            <TextBlock Classes="muted" Text="Monitor de bateria Bluetooth na barra de tarefas" />
+            <TextBlock Text="{Binding VersionText}" Foreground="#93C5FD" FontSize="12" Margin="0,8,0,0" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

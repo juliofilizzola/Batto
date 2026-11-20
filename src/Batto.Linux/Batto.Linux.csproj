@@ -16,7 +16,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageReference Include="Tmds.DBus.Protocol" Version="0.95.2" />
-    <PackageReference Include="SkiaSharp" Version="4.154.0" />
   </ItemGroup>
 
   <ItemGroup>
