@@ -1,0 +1,36 @@
+name: CI TEST BATTO
+on:
+  pull_request:
+    branches:
+      [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build Batto.slnx -c Release
+        
+  test_batto:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+        
+      - name: Set up .NET CORE
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: Test
+        run: dotnet test Batto.slnx -c Release
