@@ -53,6 +53,21 @@ public class BatteryMonitorTests
     }
 
     [Fact]
+    public void GetDevicesForTray_ExcludesDisconnectedDevicesEvenWhenTrayVisible()
+    {
+        using var harness = new Harness();
+        var device = CreateDevice();
+        harness.Source.Discover(device);
+        harness.Monitor.SetDeviceTrayVisibility(device, true);
+        Assert.Single(harness.Monitor.GetDevicesForTray());
+
+        device.IsConnected = false;
+
+        Assert.Empty(harness.Monitor.GetDevicesForTray());
+        Assert.True(device.IsTrayVisible);
+    }
+
+    [Fact]
     public void DeviceRemoved_ForgetsPlatformStateAndRemovesDevice()
     {
         using var harness = new Harness();
