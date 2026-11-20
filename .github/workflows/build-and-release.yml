@@ -54,6 +54,7 @@ jobs:
 
   linux-package:
     runs-on: ubuntu-latest
+    needs: [build, test, lint]
     container: archlinux:latest
     steps:
       - uses: actions/checkout@v4
@@ -63,7 +64,6 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --needed --noconfirm base-devel git dotnet-sdk-10.0 bluez icu fontconfig libxkbcommon wayland libx11
 
-      # makepkg refuses to run as root, so the package is built by a regular user.
       - name: Build Arch package
         run: |
           useradd -m builder
