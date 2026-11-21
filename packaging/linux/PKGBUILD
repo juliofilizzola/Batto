@@ -2,7 +2,7 @@
 # Local build from this checkout (no release tarball yet).
 # Build and install: cd packaging/linux && makepkg -si
 pkgname=batto
-pkgver=0.0.4
+pkgver=0.0.8
 pkgrel=1
 pkgdesc="Monitor de bateria Bluetooth na bandeja (BlueZ, StatusNotifierItem)"
 arch=('x86_64')
